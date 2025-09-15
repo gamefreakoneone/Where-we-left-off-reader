@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+python-multipart
+pydantic
+openai
+langchain
+langchain-openai
+langgraph
+pymupdf
+chromadb
+tiktoken
