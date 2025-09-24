@@ -9,8 +9,6 @@ from typing import List, Dict, Any
 from pydantic import BaseModel, Field
 from openai import AsyncOpenAI, RateLimitError, APIError, APIConnectionError, InternalServerError
 
-# --- Pydantic Models for AI-based data extraction ---
-
 class Relationship(BaseModel):
     with_name: str = Field(..., description="Other character's name")
     type: str = Field(..., description="e.g., ally | mentor | antagonist | family | rival | colleague | unknown")
@@ -108,7 +106,6 @@ def make_chapter_skeletons(chapters):
     } for i, ch in enumerate(chapters, start=1)]}
 
 
-# --- AI-Powered Content Generation (Adapted from your script) ---
 
 chapter_fill_prompt = "You are a library assistant skilled at extracting structured information from story book chapters. Fill in the structured data fields based *only* on the provided chapter text. Do not add outside knowledge or spoilers. Be concise and accurate."
 chapter_fill_global_prompt = "You are a library assistant skilled at synthesizing story information. Given the story so far (summary and characters) and a new chapter, update the global summary and character list to reflect the new developments. Be concise and avoid spoilers."
@@ -118,7 +115,7 @@ async def fill_chapter_with_model_async(client: AsyncOpenAI, chapter_text: str, 
     # for simplicity in this example. A production system should have robust retries.
     async with semaphore:
         resp = await client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-5-mini",
             messages=[
                 {"role": "system", "content": chapter_fill_prompt},
                 {"role": "user", "content": chapter_text},
@@ -136,7 +133,7 @@ async def create_global_view(client: AsyncOpenAI, previous_summary: str, previou
         "characters_in_current_chapter": current_chapter["characters"],
     }
     resp = await client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="gpt-5-mini",
         messages=[
             {"role": "system", "content": chapter_fill_global_prompt},
             {"role": "user", "content": json.dumps(context, indent=2)}
