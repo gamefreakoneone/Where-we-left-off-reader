@@ -14,26 +14,25 @@ from langgraph.graph import START, END, StateGraph
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 import operator
 
-# --- State Definition for the RAG Agent ---
-
+# Double check the flow of the code .
 class StoryState(TypedDict):
     messages: Annotated[List, operator.add]
     question: str
     curr_page: int
-    book_id: str
+    book_id: str # This wasnt there before but will be needed
     iteration_count: int
     max_iterations: int
     chapter_context: dict
     retrieved_docs: List[Document]
 
-# --- RAG Agent Nodes ---
-
-llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+llm = ChatOpenAI(model="gpt-5-mini", temperature=0)
 
 # A global cache for vector stores to avoid reloading from disk on every request
 vector_store_cache = {}
 
-def get_vector_store(book_id: str, data_dir: str) -> Chroma:
+# Search query seems to be missing
+
+def get_vector_store(book_id: str, data_dir: str) -> Chroma: # Completlely new
     """Loads a persistent Chroma vector store, creating it if it doesn't exist."""
     if book_id in vector_store_cache:
         return vector_store_cache[book_id]
@@ -58,7 +57,7 @@ def get_vector_store(book_id: str, data_dir: str) -> Chroma:
     vector_store_cache[book_id] = vector_store
     return vector_store
 
-def initialize_question(state: StoryState) -> Dict:
+def initialize_question(state: StoryState) -> Dict: # This looks to be modified
     """Initializes the state for a new question."""
     question = state["messages"][-1].content
     return {
@@ -71,9 +70,9 @@ def initialize_question(state: StoryState) -> Dict:
 def get_current_chapter_context(state: StoryState) -> Dict:
     """Loads chapter context from the book's JSON file."""
     curr_page = state["curr_page"]
-    book_id = state["book_id"]
+    book_id = state["book_id"] # Not there before
     data_dir = "data" # Assuming a 'data' directory at the root
-    json_path = os.path.join(data_dir, book_id, "story_global_view.json")
+    json_path = os.path.join(data_dir, book_id, "story_global_view.json") # Need to modify this to a database
 
     try:
         with open(json_path, "r") as f:

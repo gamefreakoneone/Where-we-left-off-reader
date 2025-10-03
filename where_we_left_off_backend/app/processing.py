@@ -1,4 +1,3 @@
-
 import re
 import json
 import fitz  # PyMuPDF
@@ -6,25 +5,47 @@ import asyncio
 import os
 import random
 from typing import List, Dict, Any
+from datetime import datetime
 from pydantic import BaseModel, Field
-from openai import AsyncOpenAI, RateLimitError, APIError, APIConnectionError, InternalServerError
+from openai import (
+    AsyncOpenAI,
+    RateLimitError,
+    APIError,
+    APIConnectionError,
+    InternalServerError,
+)
+from motor.motor_asyncio import AsyncIOMotorClient  # Looks like it is deprecated
+# from pymongo.asynchronous import AsyncMongoClient
+
 
 class Relationship(BaseModel):
     with_name: str = Field(..., description="Other character's name")
-    type: str = Field(..., description="e.g., ally | mentor | antagonist | family | rival | colleague | unknown")
+    type: str = Field(
+        ...,
+        description="e.g., ally | mentor | antagonist | family | rival | colleague | unknown",
+    )
     justification: str = Field(..., description="<= 50 words")
+
 
 class Character(BaseModel):
     name: str = Field(..., description="Name of the character")
     aliases: List[str] = Field(..., description="List of aliases for the character")
-    status: str = Field(..., description="e.g: active | missing | dead | resolved | tentative")
-    chapter_role: str = Field(..., description="e.g: POV | supporting | antagonist | cameo | unknown")
-    character_actions: str = Field(..., description="Key actions in this chapter (<= 100 words)")
+    status: str = Field(
+        ..., description="e.g: active | missing | dead | resolved | tentative"
+    )
+    chapter_role: str = Field(
+        ..., description="e.g: POV | supporting | antagonist | cameo | unknown"
+    )
+    character_actions: str = Field(
+        ..., description="Key actions in this chapter (<= 100 words)"
+    )
     relationships: List[Relationship]
+
 
 class ChapterFill(BaseModel):
     summary_local: str = Field(..., description="Summary of the chapter (<= 160 words)")
     characters: List[Character]
+
 
 class RelationshipGlobal(BaseModel):
     with_name: str
@@ -32,27 +53,39 @@ class RelationshipGlobal(BaseModel):
     justification: str = Field(..., description="<= 100 words")
     importance: int = Field(..., description="0-5 scale")
 
+
 class CharacterGlobal(BaseModel):
     name: str
     aliases: List[str]
     status: str
     chapter_role: str
-    character_actions: str = Field(..., description="Key actions in the ongoing story (<= 200 words)")
+    character_actions: str = Field(
+        ..., description="Key actions in the ongoing story (<= 200 words)"
+    )
     relationships: List[RelationshipGlobal]
 
+
 class ChapterGlobal(BaseModel):
-    summary_global: str = Field(..., description="Summary of the ongoing story (<= 250 words)")
+    summary_global: str = Field(
+        ..., description="Summary of the ongoing story (<= 250 words)"
+    )
     characters: List[CharacterGlobal]
 
 
-# --- Core PDF Processing Logic (Adapted from your script) ---
-
 FRONT_MATTER_STOPWORDS = {
-    "contents", "table of contents", "copyright", "title page",
-    "about the author", "dedication", "preface", "foreword", "acknowledgements",
+    "contents",
+    "table of contents",
+    "copyright",
+    "title page",
+    "about the author",
+    "dedication",
+    "preface",
+    "foreword",
+    "acknowledgements",
 }
 
-def is_probable_chapter(title: str) -> bool:
+
+def is_probable_chapter(title: str) :
     t = title.strip().lower()
     if t in FRONT_MATTER_STOPWORDS:
         return False
@@ -61,6 +94,7 @@ def is_probable_chapter(title: str) -> bool:
     if re.match(r"^\s*\d+(\.\d+)*\b", t):
         return True
     return len(title.strip()) >= 6
+
 
 def load_toc(doc: fitz.Document):
     toc = doc.get_toc(simple=True)
@@ -71,15 +105,21 @@ def load_toc(doc: fitz.Document):
         clean.append((level, title.strip(), page))
     return clean
 
+
 def derive_chapter_ranges(doc: fitz.Document):
     toc = load_toc(doc)
     if not toc:
         return []
 
-    level_counts = {level: level_counts.get(level, 0) + 1 for level, title, _ in toc if is_probable_chapter(title)}
+    level_counts = {}
+    for level, title, _ in toc:
+        if is_probable_chapter(title):
+            level_counts[level] = level_counts.get(level, 0) + 1
     chapter_level = min(level_counts, key=lambda k: (-level_counts[k], k)) if level_counts else 1
 
-    filtered = [(lvl, title, page) for (lvl, title, page) in toc if lvl >= chapter_level]
+    filtered = [
+        (lvl, title, page) for (lvl, title, page) in toc if lvl >= chapter_level
+    ]
     chapters = []
     for i, (lvl, title, page1_based) in enumerate(filtered):
         if lvl != chapter_level:
@@ -92,39 +132,107 @@ def derive_chapter_ranges(doc: fitz.Document):
                 end_0based = max(0, page_j_1b - 2)
                 break
         if start <= end_0based:
-            chapters.append({"level": lvl, "title": title, "start_page": start, "end_page": end_0based})
+            chapters.append(
+                {
+                    "level": lvl,
+                    "title": title,
+                    "start_page": start,
+                    "end_page": end_0based,
+                }
+            )
 
     return [c for c in chapters if is_probable_chapter(c["title"])]
 
-def extract_text_range(doc: fitz.Document, start_page: int, end_page: int) -> str:
-    return "\n".join(doc[p].get_text("text", sort=True).strip() for p in range(start_page, end_page + 1)).strip()
+
+def extract_text_range(doc: fitz.Document, start_page: int, end_page: int) :
+    return "\n".join(
+        doc[p].get_text("text", sort=True).strip()
+        for p in range(start_page, end_page + 1)
+    ).strip()
+
 
 def make_chapter_skeletons(chapters):
-    return {"chapter": [{
-        "chapter_id": i, "title": ch["title"], "pages": [ch["start_page"], ch["end_page"]],
-        "summary_local": "", "characters": []
-    } for i, ch in enumerate(chapters, start=1)]}
+    return {
+        "chapter": [
+            {
+                "chapter_id": i,
+                "title": ch["title"],
+                "pages": [ch["start_page"], ch["end_page"]],
+                "summary_local": "",
+                "characters": [],
+            }
+            for i, ch in enumerate(chapters, start=1)
+        ]
+    }
 
 
+chapter_fill_prompt = (
+    "You are an expert library assistant who is skilled at extracting structured information from story book chapters. You are given the text of a chapter and must fill in the structured data fields, such that it meets the following criteria:"
+    "1. The summary_local field must contain a concise summary of the chapter in the context of the data provided. Even if you are aware about the story you are dealing with, do not add additional information that can potentially spoil the future chapters, limited to 160 words.\n"
+    "2. For the characters entry, it is a list of Character objects, each with the following fields:\n"
+    "   - name: Name of the character\n"
+    "   - aliases: List of aliases for the character. Do not include generic pronouns such as 'he', 'she', or 'they' or role words such as teacher, guard , protagonist , antagonist etc\n"
+    "   - status: e.g: active | missing | dead | resolved | tentative\n"
+    "   - chapter_role: e.g: POV | supporting | antagonist | cameo | unknown\n"
+    "   - character_actions: Key actions or events involving the character in this chapter (<= 100 words)\n"
+    "   - relationships: List of Relationship objects\n"
+    "3. For the relationships entry, it is a list of Relationship objects, each with the following fields:\n"
+    "   - with_name: Other character's name\n"
+    "   - type: Relationship type (e.g., ally | mentor | antagonist | family | rival | colleague | unknown)\n"
+    "   - justification: an explanation in the context of the chapter why the relationship exists ( <= 50 words)\n"
+)
 
-chapter_fill_prompt = "You are a library assistant skilled at extracting structured information from story book chapters. Fill in the structured data fields based *only* on the provided chapter text. Do not add outside knowledge or spoilers. Be concise and accurate."
-chapter_fill_global_prompt = "You are a library assistant skilled at synthesizing story information. Given the story so far (summary and characters) and a new chapter, update the global summary and character list to reflect the new developments. Be concise and avoid spoilers."
+chapter_fill_global = """
+You are an expert library assistant who is skilled at extracting structured information from story book chapters. You are given the text of a chapter and must fill in the structured data fields, such that it meets the following criteria:
+1. The summary_global field must contain a concise summary of the ongoing story in the context of the previous chapter summary and current chapter summary provided. Even if you are aware about the story you are dealing with, do not add additional information that can potentially spoil the future chapters, limited to 250 words.
+2. The characters field must include all relevant characters introduced or developed in the chapter, along with their updated attributes. This includes :
+   - Name: Name of the character
+   - Aliases: List of character aliases
+   - Status: Current status of the character in the context of the ongoing story with reference to previous chapters and current chapter
+   - Chapter role: Role of the character in the chapter in the context of the ongoing story
+   - Character actions: Key actions or events involving the character in the ongoing story
+   - Relationships: List of relationships with other characters
+3. For the relationships field, it is a list of Relationship objects, each with the following fields:
+    - with_name: Other character's name
+    - type: Relationship type (e.g., ally | mentor | antagonist | family | rival | colleague | unknown)
+    - justification: an explanation in the context of the chapter why the relationship exists ( <= 100 words)
+    - importance: Importance of the relationship on a scale of 0-5, where 0 is negligible and 5 is critical to the story. Update the importance level as the story progresses.
+"""
 
-async def fill_chapter_with_model_async(client: AsyncOpenAI, chapter_text: str, semaphore: asyncio.Semaphore) -> ChapterFill:
-    # This function remains largely the same, but we remove the retry logic here
-    # for simplicity in this example. A production system should have robust retries.
-    async with semaphore:
-        resp = await client.chat.completions.create(
-            model="gpt-5-mini",
-            messages=[
-                {"role": "system", "content": chapter_fill_prompt},
-                {"role": "user", "content": chapter_text},
-            ],
-            response_model=ChapterFill,
-        )
-        return resp
 
-async def create_global_view(client: AsyncOpenAI, previous_summary: str, previous_characters: dict, current_chapter: dict) -> ChapterGlobal:
+async def fill_chapter_with_model_async(
+    client: AsyncOpenAI,
+    chapter_text: str,
+    *,
+    semaphore: asyncio.Semaphore,
+    max_retries: int = 5,
+) :
+    backoff = 1
+    for attempt in range(max_retries):
+        try:
+            async with semaphore:
+                resp = await client.responses.parse(
+                    model="gpt-5-mini",
+                    input=[
+                        {"role": "system", "content": chapter_fill_prompt},
+                        {"role": "user", "content": chapter_text},
+                    ],
+                    text_format=ChapterFill,
+                )
+            return resp.output_parsed
+        except (RateLimitError, APIError, APIConnectionError, InternalServerError) as e:
+            if attempt == max_retries - 1:
+                raise
+            await asyncio.sleep(backoff + random.random())
+            backoff = min(backoff * 2, 30)
+
+
+async def create_global_view(
+    client: AsyncOpenAI,
+    previous_summary: str,
+    previous_characters: dict,
+    current_chapter: dict,
+) :
     context = {
         "previous_story_summary": previous_summary,
         "all_known_characters_so_far": list(previous_characters.values()),
@@ -132,41 +240,113 @@ async def create_global_view(client: AsyncOpenAI, previous_summary: str, previou
         "current_chapter_summary": current_chapter["summary_local"],
         "characters_in_current_chapter": current_chapter["characters"],
     }
-    resp = await client.chat.completions.create(
-        model="gpt-5-mini",
-        messages=[
-            {"role": "system", "content": chapter_fill_global_prompt},
-            {"role": "user", "content": json.dumps(context, indent=2)}
-        ],
-        response_model=ChapterGlobal,
-    )
-    return resp
 
-def _normalize_and_validate_global(ch: ChapterGlobal) -> ChapterGlobal:
+    resp = await client.responses.parse(
+        model="gpt-5-mini",
+        input=[
+            {"role": "system", "content": chapter_fill_global},
+            {"role": "user", "content": json.dumps(context, indent=2)},
+        ],
+        text_format=ChapterGlobal,
+    )
+    return resp.output_parsed
+
+
+def _normalize_and_validate_global(ch: ChapterGlobal) :
     if not ch or not ch.characters:
         return ch
+
     for c in ch.characters:
-        c.aliases = list(set(alias.strip() for alias in (c.aliases or []) if alias.strip()))
-        if c.relationships:
-            for r in c.relationships:
-                r.importance = max(0, min(5, int(r.importance or 0)))
+        seen_aliases = set()
+        unique_aliases = []
+        for alias in c.aliases or []:
+            stripped_alias = (alias or "").strip()
+            if stripped_alias and stripped_alias.lower() not in seen_aliases:
+                seen_aliases.add(stripped_alias.lower())
+                unique_aliases.append(stripped_alias)
+        c.aliases = unique_aliases
+
+        if not c.relationships:
+            continue
+        for r in c.relationships:
+            r.importance = max(0, min(5, int(r.importance or 0)))
+            if r.justification and len(r.justification.split()) > 100:
+                r.justification = " ".join(r.justification.split()[:100]) + "..."
     return ch
 
-# --- Main Processing Orchestrator ---
 
-async def process_book(pdf_path: str, book_id: str, data_dir: str):
+# --- MongoDB Setup ---
+def get_mongo_client(connection_string: str = None):
+    """Create and return MongoDB client"""
+    if connection_string is None:
+        connection_string = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
+    return AsyncIOMotorClient(connection_string)
+    # return AsyncMongoClient(connection_string)
+
+
+async def save_local_chapters_to_mongo(db, book_id: str, chapters_data: dict):
+    """Save first pass (local) chapter data to MongoDB"""
+    collection = db.chapters_local
+    
+    for chapter in chapters_data["chapter"]:
+        doc = {
+            "book_id": book_id,
+            "chapter_id": chapter["chapter_id"],
+            "title": chapter["title"],
+            "pages": chapter["pages"],
+            "summary_local": chapter["summary_local"],
+            "characters": chapter["characters"],
+            "processed_at": datetime.utcnow()
+        }
+        await collection.update_one(
+            {"book_id": book_id, "chapter_id": chapter["chapter_id"]},
+            {"$set": doc},
+            upsert=True
+        )
+    print(f"Saved {len(chapters_data['chapter'])} local chapters to MongoDB")
+
+
+async def save_global_chapters_to_mongo(db, book_id: str, chapters_data: dict):
+    """Save second pass (global) chapter data to MongoDB"""
+    collection = db.chapters_global
+    
+    for chapter in chapters_data["chapter"]:
+        doc = {
+            "book_id": book_id,
+            "chapter_id": chapter["chapter_id"],
+            "title": chapter["title"],
+            "pages": chapter["pages"],
+            "summary_local": chapter.get("summary_local", ""),
+            "summary_global": chapter.get("summary_global", ""),
+            "characters": chapter["characters"],
+            "processed_at": datetime.utcnow()
+        }
+        await collection.update_one(
+            {"book_id": book_id, "chapter_id": chapter["chapter_id"]},
+            {"$set": doc},
+            upsert=True
+        )
+    print(f"Saved {len(chapters_data['chapter'])} global chapters to MongoDB")
+
+async def process_book(
+    pdf_path: str, 
+    book_id: str, 
+    mongo_connection_string: str = None
+):
     """
-    The main background task to process a PDF file.
-    It orchestrates the two-pass processing and saves the results.
+    Main task to process a PDF file and store results in MongoDB.
     """
     print(f"Starting processing for book_id: {book_id}")
-    book_data_dir = os.path.join(data_dir, book_id)
-    os.makedirs(book_data_dir, exist_ok=True)
+    
+    # Connect to MongoDB
+    mongo_client = get_mongo_client(mongo_connection_string)
+    db = mongo_client.story_processor
 
     try:
         doc = fitz.open(pdf_path)
     except Exception as e:
         print(f"Error opening PDF {pdf_path}: {e}")
+        mongo_client.close()
         return
 
     # === First Pass: Chapter Extraction and Local Summaries ===
@@ -174,18 +354,23 @@ async def process_book(pdf_path: str, book_id: str, data_dir: str):
     if not chapters:
         print("No chapters derived. Aborting.")
         doc.close()
+        mongo_client.close()
         return
 
     first_pass_data = make_chapter_skeletons(chapters)
     aclient = AsyncOpenAI()
-    sem = asyncio.Semaphore(4) # Limit concurrency
+    sem = asyncio.Semaphore(4)
 
     async def first_pass_task(i, chapter_info):
-        text = extract_text_range(doc, chapter_info["pages"][0], chapter_info["pages"][1])
+        text = extract_text_range(
+            doc, chapter_info["pages"][0], chapter_info["pages"][1]
+        )
         if not text.strip():
             return i, None
         try:
-            filled_data = await fill_chapter_with_model_async(aclient, text, semaphore=sem)
+            filled_data = await fill_chapter_with_model_async(
+                aclient, text, semaphore=sem
+            )
             return i, filled_data
         except Exception as e:
             print(f"Chapter {chapter_info['chapter_id']} (pass 1) failed: {e}")
@@ -197,41 +382,51 @@ async def process_book(pdf_path: str, book_id: str, data_dir: str):
     for i, result in results:
         if result:
             first_pass_data["chapter"][i]["summary_local"] = result.summary_local
-            first_pass_data["chapter"][i]["characters"] = [c.model_dump() for c in result.characters]
+            first_pass_data["chapter"][i]["characters"] = [
+                c.model_dump() for c in result.characters
+            ]
 
-    # === Second Pass: Global View Synthesis ===
+    # Save first pass data to MongoDB
+    await save_local_chapters_to_mongo(db, book_id, first_pass_data)
+
+    # === Second Pass: Global View ===
     second_pass_output = {"chapter": []}
     cumulative_summary = ""
     cumulative_characters = {}
 
     for i, chapter_data in enumerate(first_pass_data["chapter"]):
-        print(f"Second Pass - Processing chapter {i+1}/{len(first_pass_data['chapter'])}")
+        print(
+            f"Second Pass - Processing chapter {i+1}/{len(first_pass_data['chapter'])}"
+        )
         try:
             global_view = await create_global_view(
                 client=aclient,
                 previous_summary=cumulative_summary,
                 previous_characters=cumulative_characters,
-                current_chapter=chapter_data
+                current_chapter=chapter_data,
             )
             validated_global_view = _normalize_and_validate_global(global_view)
             cumulative_summary = validated_global_view.summary_global
-            cumulative_characters = {char.name: char.model_dump() for char in validated_global_view.characters}
+            cumulative_characters = {
+                char.name: char.model_dump()
+                for char in validated_global_view.characters
+            }
 
-            second_pass_output["chapter"].append({
-                **chapter_data,
-                "summary_global": cumulative_summary,
-                "characters": list(cumulative_characters.values()),
-            })
+            second_pass_output["chapter"].append(
+                {
+                    **chapter_data,
+                    "summary_global": cumulative_summary,
+                    "characters": list(cumulative_characters.values()),
+                }
+            )
         except Exception as e:
             print(f"Chapter {chapter_data['chapter_id']} (pass 2) failed: {e}")
-            # Append with only first pass data if second pass fails
             second_pass_output["chapter"].append(chapter_data)
 
-
-    # === Save Final Output ===
-    output_filename = os.path.join(book_data_dir, "story_global_view.json")
-    with open(output_filename, "w") as f:
-        json.dump(second_pass_output, f, indent=2)
+    # Save second pass data to MongoDB
+    await save_global_chapters_to_mongo(db, book_id, second_pass_output)
 
     doc.close()
-    print(f"Processing complete for book_id: {book_id}. Output saved to {output_filename}")
+    mongo_client.close()
+    print(f"Processing complete for book_id: {book_id}. Data saved to MongoDB")
+
