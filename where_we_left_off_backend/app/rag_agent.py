@@ -23,7 +23,7 @@ DEFAULT_MAX_ITERATIONS = 3
 SEARCH_K = 10
 RESULTS_LIMIT = 4
 
-llm = ChatOpenAI(model=LLM_MODEL, temperature=0)
+llm = ChatOpenAI(model=LLM_MODEL)
 vector_store_cache = {}
 # mongo_client = None
 # db = None
