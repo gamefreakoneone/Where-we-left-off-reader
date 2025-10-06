@@ -5,6 +5,7 @@ import { useState } from 'react';
 interface ChatWindowProps {
   bookId: string;
   bookmarkedPage: number;
+  onNewGraphData: (data: any) => void;
 }
 
 interface Message {
@@ -12,7 +13,7 @@ interface Message {
   text: string;
 }
 
-export default function ChatWindow({ bookId, bookmarkedPage }: ChatWindowProps) {
+export default function ChatWindow({ bookId, bookmarkedPage, onNewGraphData }: ChatWindowProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -38,6 +39,17 @@ export default function ChatWindow({ bookId, bookmarkedPage }: ChatWindowProps) 
       const data = await res.json();
       const aiMessage: Message = { sender: 'ai', text: data.answer };
       setMessages(prev => [...prev, aiMessage]);
+
+      // Check if the response contains graph data and update central state
+      try {
+        const potentialGraphData = JSON.parse(data.answer);
+        // If it's a valid JSON object, assume it's graph data
+        if (typeof potentialGraphData === 'object' && potentialGraphData !== null) {
+          onNewGraphData(potentialGraphData);
+        }
+      } catch (jsonError) {
+        // It's not JSON, so it's just a regular text message. Do nothing.
+      }
 
     } catch (error) {
       console.error("Chat error:", error);

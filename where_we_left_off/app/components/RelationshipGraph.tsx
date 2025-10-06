@@ -5,11 +5,11 @@ import ReactFlow, { Background, Controls, MiniMap, Node, Edge } from 'reactflow'
 import 'reactflow/dist/style.css';
 
 interface RelationshipGraphProps {
-  storyData: any;
+  graphData: any;
   bookmarkedPage: number;
 }
 
-export default function RelationshipGraph({ storyData, bookmarkedPage }: RelationshipGraphProps) {
+export default function RelationshipGraph({ graphData: storyData, bookmarkedPage }: RelationshipGraphProps) {
 
   const graphData = useMemo(() => {
     const nodes: Node[] = [];

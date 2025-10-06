@@ -1,116 +1,83 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import LeftPanel from "./components/LeftPanel";
-import PdfViewer from "./components/PdfViewer";
-import RightPanel from "./components/RightPanel";
-import FileUpload from "./components/FileUpload";
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import FileUpload from './components/FileUpload';
+import { useRouter } from 'next/navigation';
 
-export default function Home() {
-  const [bookId, setBookId] = useState<string | null>(null);
-  const [file, setFile] = useState<File | null>(null);
-  const [processingStatus, setProcessingStatus] = useState<string>("");
-  const [storyData, setStoryData] = useState<any>(null);
-  const [bookmarkedPage, setBookmarkedPage] = useState<number>(1);
+interface Book {
+  book_id: string;
+  filename: string;
+  status: string;
+}
 
-  // Poll for processing status
+export default function HomePage() {
+  const [books, setBooks] = useState<Book[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [uploadStatus, setUploadStatus] = useState('idle');
+  const router = useRouter();
+
   useEffect(() => {
-    if (bookId && processingStatus === "in_progress") {
-      const interval = setInterval(async () => {
-        try {
-          const res = await fetch(`http://127.0.0.1:8000/books/status/${bookId}`);
-          if (!res.ok) throw new Error("Failed to fetch status");
-          const data = await res.json();
-          if (data.status === "complete") {
-            setProcessingStatus("complete");
-            clearInterval(interval);
-          }
-        } catch (error) {
-          console.error("Status check failed:", error);
-          setProcessingStatus("failed");
-          clearInterval(interval);
-        }
-      }, 5000); // Poll every 5 seconds
+    const fetchBooks = async () => {
+      try {
+        const res = await fetch('http://127.0.0.1:8000/books');
+        if (!res.ok) throw new Error('Failed to fetch books');
+        const data = await res.json();
+        setBooks(data);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-      return () => clearInterval(interval);
-    }
-  }, [bookId, processingStatus]);
+    fetchBooks();
+  }, []);
 
-  // Fetch story data once processing is complete
-  useEffect(() => {
-    if (processingStatus === "complete" && bookId) {
-      const fetchStoryData = async () => {
-        try {
-            // This is a placeholder for an endpoint that should return the full story_global_view.json
-            // You may need to add this endpoint to your FastAPI backend
-          const res = await fetch(`http://127.0.0.1:8000/books/data/${bookId}`);
-          if (!res.ok) throw new Error("Failed to fetch story data");
-          const data = await res.json();
-          setStoryData(data);
-        } catch (error) {
-          console.error("Failed to fetch story data:", error);
-        }
-      };
-      fetchStoryData();
-    }
-  }, [processingStatus, bookId]);
-
-  const handleFileUpload = async (selectedFile: File) => {
-    setFile(selectedFile);
-    setProcessingStatus("uploading");
-
-    const formData = new FormData();
-    formData.append("file", selectedFile);
-
-    try {
-      const res = await fetch("http://127.0.0.1:8000/books/upload", {
-        method: "POST",
-        body: formData,
-      });
-      if (!res.ok) throw new Error("Upload failed");
-      const data = await res.json();
-      setBookId(data.book_id);
-      setProcessingStatus("in_progress");
-    } catch (error) {
-      console.error("Upload failed:", error);
-      setProcessingStatus("failed");
-    }
+  const handleUploadSuccess = (bookId: string, file: File) => {
+    // Navigate to the new book's reader page
+    router.push(`/books/${bookId}`);
   };
 
-  if (!bookId) {
-    return <FileUpload onFileUpload={handleFileUpload} status={processingStatus} />;
-  }
-
-  if (processingStatus !== "complete" || !storyData) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h2 className="text-2xl font-semibold mb-4">Processing your book...</h2>
-          <p className="text-gray-400">This may take a few minutes. Please wait.</p>
-          <div className="mt-4 w-16 h-16 border-4 border-dashed rounded-full animate-spin border-blue-500 mx-auto"></div>
-        </div>
-      </div>
-    );
-  }
+  const handleUploadFailed = () => {
+    setUploadStatus('failed');
+  };
 
   return (
-    <div className="grid grid-cols-[1fr_2fr_1fr] h-screen gap-4 p-4 bg-gray-900 text-white">
-      <div className="bg-gray-800 rounded-lg p-4 overflow-y-auto">
-        <LeftPanel 
-          storyData={storyData} 
-          bookmarkedPage={bookmarkedPage}
-          onBookmarkPage={setBookmarkedPage}
-        />
-      </div>
-      <div className="bg-gray-800 rounded-lg flex items-center justify-center">
-        {file && <PdfViewer file={file} bookmarkedPage={bookmarkedPage} setBookmarkedPage={setBookmarkedPage} />}
-      </div>
-      <div className="bg-gray-800 rounded-lg p-4 flex flex-col">
-        <RightPanel 
-            storyData={storyData} 
-            bookmarkedPage={bookmarkedPage} 
-            bookId={bookId}
-        />
+    <div className="min-h-screen bg-gray-900 text-white p-8">
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-4xl font-bold text-center mb-10">Project Velcro Library</h1>
+
+        <div className="bg-gray-800 p-6 rounded-lg shadow-lg mb-10">
+            <h2 className="text-2xl font-semibold mb-4">Upload New Book</h2>
+            <FileUpload 
+                onUploadSuccess={handleUploadSuccess}
+                onUploadFailed={handleUploadFailed}
+                setProcessingStatus={setUploadStatus}
+                status={uploadStatus}
+            />
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-semibold mb-4">Your Books</h2>
+          {isLoading && <p>Loading books...</p>}
+          {error && <p className="text-red-500">Error: {error}</p>}
+          {!isLoading && !error && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {books.map((book) => (
+                <Link href={`/books/${book.book_id}`} key={book.book_id}>
+                  <div className="block bg-gray-800 p-6 rounded-lg hover:bg-gray-700 transition-colors cursor-pointer h-full flex flex-col justify-between">
+                    <h3 className="text-xl font-semibold mb-2 truncate">{book.filename.replace(/\.pdf$/i, '')}</h3>
+                    <span className={`text-sm font-medium px-3 py-1 rounded-full self-start ${book.status === 'complete' ? 'bg-green-600' : 'bg-yellow-600'}`}>
+                      {book.status}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

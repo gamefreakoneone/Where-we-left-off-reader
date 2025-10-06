@@ -9,3 +9,4 @@ langgraph
 pymupdf
 chromadb
 tiktoken
+python-dotenv 

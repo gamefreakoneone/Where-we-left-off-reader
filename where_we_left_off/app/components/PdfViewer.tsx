@@ -1,21 +1,25 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
-import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
-import 'react-pdf/dist/esm/Page/TextLayer.css';
-
-// Set up worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
 
 interface PdfViewerProps {
-  file: File;
+  file: File | string; // Accept either a File object or a URL string
   bookmarkedPage: number;
   setBookmarkedPage: (page: number) => void;
 }
 
 export default function PdfViewer({ file, bookmarkedPage, setBookmarkedPage }: PdfViewerProps) {
   const [numPages, setNumPages] = useState<number | null>(null);
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    // According to React-PDF documentation, use CDN with proper version
+    pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+    setIsReady(true);
+  }, []);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
     setNumPages(numPages);
@@ -24,10 +28,23 @@ export default function PdfViewer({ file, bookmarkedPage, setBookmarkedPage }: P
   const goToPrevPage = () => setBookmarkedPage(Math.max(1, bookmarkedPage - 1));
   const goToNextPage = () => setBookmarkedPage(Math.min(numPages!, bookmarkedPage + 1));
 
+  if (!isReady) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <div className="text-white">Loading PDF viewer...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full h-full flex flex-col items-center">
       <div className="flex-grow overflow-y-auto w-full flex justify-center">
-        <Document file={file} onLoadSuccess={onDocumentLoadSuccess}>
+        <Document 
+          file={file} 
+          onLoadSuccess={onDocumentLoadSuccess}
+          loading={<div className="text-white">Loading PDF...</div>}
+          error={<div className="text-red-500">Error loading PDF</div>}
+        >
           <Page pageNumber={bookmarkedPage} />
         </Document>
       </div>

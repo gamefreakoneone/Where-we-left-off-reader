@@ -3,12 +3,12 @@
 import { useMemo } from 'react';
 
 interface LeftPanelProps {
-  storyData: any;
+  graphData: any;
   bookmarkedPage: number;
   onBookmarkPage: (page: number) => void;
 }
 
-export default function LeftPanel({ storyData, bookmarkedPage, onBookmarkPage }: LeftPanelProps) {
+export default function LeftPanel({ graphData: storyData, bookmarkedPage, onBookmarkPage }: LeftPanelProps) {
 
   const currentChapter = useMemo(() => {
     if (!storyData || !storyData.chapter) return null;

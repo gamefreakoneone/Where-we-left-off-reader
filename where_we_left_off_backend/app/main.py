@@ -1,14 +1,21 @@
 
 import os
 import uuid
+from dotenv import load_dotenv
+
+# Load environment variables from .env file before anything else
+load_dotenv()
+
 from contextlib import asynccontextmanager
 from datetime import datetime
 from fastapi import FastAPI, File, UploadFile, BackgroundTasks, HTTPException
+from fastapi.responses import FileResponse
 from motor.motor_asyncio import AsyncIOMotorClient
 
 from .models import ChatRequest, ChatResponse, BookProcessingResponse
 from .processing import process_book
-from .rag_agent import create_vector_store, rag_agent, init_mongo 
+from .rag_agent import create_vector_store, rag_agent 
+from fastapi.middleware.cors import CORSMiddleware
 from langchain_core.messages import AIMessage, HumanMessage
 
 # --- Constants ---
@@ -40,7 +47,31 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# --- CORS Middleware ---
+# This allows the frontend (running on localhost:3000) to communicate with the backend.
+origins = [
+    "http://localhost:3000",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 os.makedirs(PROCESSED_DIR, exist_ok=True)
+
+
+@app.get("/books", summary="List All Books")
+async def list_books():
+    """
+    Retrieves a list of all books that have been uploaded.
+    """
+    books_cursor = app.db.books.find({}, {"_id": 0, "pdf_path": 0, "vector_store_path": 0}) # Exclude internal and path fields
+    books = await books_cursor.to_list(length=None)
+    return books
 
 
 # --- API Endpoints ---
@@ -113,6 +144,49 @@ async def get_book_status(book_id: str):
         return {"status": book_doc.get("status", "processing"), "book_id": book_id}
 
     raise HTTPException(status_code=404, detail="Book ID not found.")
+
+
+@app.get("/books/pdf/{book_id}", summary="Get PDF file for a book")
+async def get_pdf_file(book_id: str):
+    """Serves the PDF file for a given book ID."""
+    book_meta = await app.db.books.find_one({"book_id": book_id})
+    if not book_meta or "pdf_path" not in book_meta:
+        raise HTTPException(status_code=404, detail="PDF path not found for this book.")
+
+    pdf_path = book_meta["pdf_path"]
+    if not os.path.exists(pdf_path):
+        raise HTTPException(status_code=404, detail="PDF file not found on server.")
+
+    return FileResponse(pdf_path, media_type='application/pdf', filename=book_meta.get("filename"))
+
+
+@app.get("/books/data/{book_id}", summary="Get Processed Book Data")
+async def get_book_data(book_id: str):
+    """
+    Retrieves all processed data for a given book_id, including book metadata
+    and all chapter information from the global processing pass.
+    """
+    # Fetch book metadata
+    book_meta = await app.db.books.find_one({"book_id": book_id})
+    if not book_meta:
+        raise HTTPException(status_code=404, detail="Book metadata not found.")
+
+    # Fetch all global chapters for the book
+    chapters_cursor = app.db.chapters_global.find({"book_id": book_id})
+    chapters = await chapters_cursor.to_list(length=None) # Use length=None to get all documents
+
+    if not chapters:
+        raise HTTPException(status_code=404, detail="No processed chapter data found for this book. Processing may still be in progress.")
+
+    # To remove the internal MongoDB _id before sending it to the frontend
+    for chap in chapters:
+        chap.pop('_id', None)
+
+    return {
+        "book_id": book_id,
+        "book_title": book_meta.get("filename", "Unknown Title"),
+        "chapter": chapters,
+    }
 
 
 @app.post("/chat/{book_id}", response_model=ChatResponse, summary="Chat with the Book Agent")
