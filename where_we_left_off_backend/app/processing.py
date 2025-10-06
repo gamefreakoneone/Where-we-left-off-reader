@@ -14,8 +14,7 @@ from openai import (
     APIConnectionError,
     InternalServerError,
 )
-from motor.motor_asyncio import AsyncIOMotorClient  # Looks like it is deprecated
-# from pymongo.asynchronous import AsyncMongoClient
+from motor.motor_asyncio import AsyncIOMotorClient
 
 
 class Relationship(BaseModel):
@@ -85,7 +84,7 @@ FRONT_MATTER_STOPWORDS = {
 }
 
 
-def is_probable_chapter(title: str) :
+def is_probable_chapter(title: str):
     t = title.strip().lower()
     if t in FRONT_MATTER_STOPWORDS:
         return False
@@ -115,7 +114,9 @@ def derive_chapter_ranges(doc: fitz.Document):
     for level, title, _ in toc:
         if is_probable_chapter(title):
             level_counts[level] = level_counts.get(level, 0) + 1
-    chapter_level = min(level_counts, key=lambda k: (-level_counts[k], k)) if level_counts else 1
+    chapter_level = (
+        min(level_counts, key=lambda k: (-level_counts[k], k)) if level_counts else 1
+    )
 
     filtered = [
         (lvl, title, page) for (lvl, title, page) in toc if lvl >= chapter_level
@@ -144,25 +145,28 @@ def derive_chapter_ranges(doc: fitz.Document):
     return [c for c in chapters if is_probable_chapter(c["title"])]
 
 
-def extract_text_range(doc: fitz.Document, start_page: int, end_page: int) :
+def extract_text_range(doc: fitz.Document, start_page: int, end_page: int):
     return "\n".join(
         doc[p].get_text("text", sort=True).strip()
         for p in range(start_page, end_page + 1)
     ).strip()
 
 
-def make_chapter_skeletons(chapters):
+def make_chapter_skeletons(book_id: str, chapters):
     return {
-        "chapter": [
-            {
-                "chapter_id": i,
-                "title": ch["title"],
-                "pages": [ch["start_page"], ch["end_page"]],
-                "summary_local": "",
-                "characters": [],
-            }
-            for i, ch in enumerate(chapters, start=1)
-        ]
+        book_id: {
+            "book_id": book_id,
+            "chapters": [
+                {
+                    "chapter_id": i,
+                    "title": ch["title"],
+                    "pages": [ch["start_page"], ch["end_page"]],
+                    "summary_local": "",
+                    "characters": [],
+                }
+                for i, ch in enumerate(chapters, start=1)
+            ],
+        }
     }
 
 
@@ -206,7 +210,7 @@ async def fill_chapter_with_model_async(
     *,
     semaphore: asyncio.Semaphore,
     max_retries: int = 5,
-) :
+):
     backoff = 1
     for attempt in range(max_retries):
         try:
@@ -232,7 +236,7 @@ async def create_global_view(
     previous_summary: str,
     previous_characters: dict,
     current_chapter: dict,
-) :
+):
     context = {
         "previous_story_summary": previous_summary,
         "all_known_characters_so_far": list(previous_characters.values()),
@@ -252,7 +256,7 @@ async def create_global_view(
     return resp.output_parsed
 
 
-def _normalize_and_validate_global(ch: ChapterGlobal) :
+def _normalize_and_validate_global(ch: ChapterGlobal):
     if not ch or not ch.characters:
         return ch
 
@@ -275,20 +279,20 @@ def _normalize_and_validate_global(ch: ChapterGlobal) :
     return ch
 
 
-# --- MongoDB Setup ---
-def get_mongo_client(connection_string: str = None):
-    """Create and return MongoDB client"""
-    if connection_string is None:
-        connection_string = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
-    return AsyncIOMotorClient(connection_string)
-    # return AsyncMongoClient(connection_string)
+# # --- MongoDB Setup ---
+# def get_mongo_client(connection_string: str = None):
+#     """Create and return MongoDB client"""
+#     if connection_string is None:
+#         connection_string = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
+#     return AsyncIOMotorClient(connection_string)
 
 
 async def save_local_chapters_to_mongo(db, book_id: str, chapters_data: dict):
     """Save first pass (local) chapter data to MongoDB"""
     collection = db.chapters_local
-    
-    for chapter in chapters_data["chapter"]:
+
+    book_data = chapters_data[book_id]
+    for chapter in book_data["chapters"]:
         doc = {
             "book_id": book_id,
             "chapter_id": chapter["chapter_id"],
@@ -296,21 +300,22 @@ async def save_local_chapters_to_mongo(db, book_id: str, chapters_data: dict):
             "pages": chapter["pages"],
             "summary_local": chapter["summary_local"],
             "characters": chapter["characters"],
-            "processed_at": datetime.utcnow()
+            "processed_at": datetime.utcnow(),
         }
         await collection.update_one(
             {"book_id": book_id, "chapter_id": chapter["chapter_id"]},
             {"$set": doc},
-            upsert=True
+            upsert=True,
         )
-    print(f"Saved {len(chapters_data['chapter'])} local chapters to MongoDB")
+    print(f"Saved {len(book_data['chapters'])} local chapters to MongoDB")
 
 
 async def save_global_chapters_to_mongo(db, book_id: str, chapters_data: dict):
     """Save second pass (global) chapter data to MongoDB"""
     collection = db.chapters_global
-    
-    for chapter in chapters_data["chapter"]:
+
+    book_data = chapters_data[book_id]
+    for chapter in book_data["chapters"]:
         doc = {
             "book_id": book_id,
             "chapter_id": chapter["chapter_id"],
@@ -319,45 +324,42 @@ async def save_global_chapters_to_mongo(db, book_id: str, chapters_data: dict):
             "summary_local": chapter.get("summary_local", ""),
             "summary_global": chapter.get("summary_global", ""),
             "characters": chapter["characters"],
-            "processed_at": datetime.utcnow()
+            "processed_at": datetime.utcnow(),
         }
         await collection.update_one(
             {"book_id": book_id, "chapter_id": chapter["chapter_id"]},
             {"$set": doc},
-            upsert=True
+            upsert=True,
         )
-    print(f"Saved {len(chapters_data['chapter'])} global chapters to MongoDB")
+    print(f"Saved {len(book_data['chapters'])} global chapters to MongoDB")
+
 
 async def process_book(
-    pdf_path: str, 
-    book_id: str, 
-    mongo_connection_string: str = None
+    pdf_path: str, book_id: str,  db
 ):
     """
     Main task to process a PDF file and store results in MongoDB.
     """
     print(f"Starting processing for book_id: {book_id}")
-    
+
     # Connect to MongoDB
-    mongo_client = get_mongo_client(mongo_connection_string)
-    db = mongo_client.story_processor
+    # mongo_client = get_mongo_client(mongo_connection_string)
+    # db = mongo_client.story_processor
 
     try:
         doc = fitz.open(pdf_path)
     except Exception as e:
         print(f"Error opening PDF {pdf_path}: {e}")
-        mongo_client.close()
         return
 
-    # === First Pass: Chapter Extraction and Local Summaries ===
+    # First Pass: Local Chapter Summaries and Characters
     chapters = derive_chapter_ranges(doc)
     if not chapters:
         print("No chapters derived. Aborting.")
         doc.close()
-        mongo_client.close()
         return
 
-    first_pass_data = make_chapter_skeletons(chapters)
+    first_pass_data = make_chapter_skeletons(book_id, chapters)
     aclient = AsyncOpenAI()
     sem = asyncio.Semaphore(4)
 
@@ -376,13 +378,18 @@ async def process_book(
             print(f"Chapter {chapter_info['chapter_id']} (pass 1) failed: {e}")
             return i, None
 
-    tasks = [first_pass_task(i, ch) for i, ch in enumerate(first_pass_data["chapter"])]
+    tasks = [
+        first_pass_task(i, ch)
+        for i, ch in enumerate(first_pass_data[book_id]["chapters"])
+    ]
     results = await asyncio.gather(*tasks)
 
     for i, result in results:
         if result:
-            first_pass_data["chapter"][i]["summary_local"] = result.summary_local
-            first_pass_data["chapter"][i]["characters"] = [
+            first_pass_data[book_id]["chapters"][i][
+                "summary_local"
+            ] = result.summary_local
+            first_pass_data[book_id]["chapters"][i]["characters"] = [
                 c.model_dump() for c in result.characters
             ]
 
@@ -390,13 +397,13 @@ async def process_book(
     await save_local_chapters_to_mongo(db, book_id, first_pass_data)
 
     # === Second Pass: Global View ===
-    second_pass_output = {"chapter": []}
+    second_pass_output = {book_id: {"book_id": book_id, "chapters": []}}
     cumulative_summary = ""
     cumulative_characters = {}
 
-    for i, chapter_data in enumerate(first_pass_data["chapter"]):
+    for i, chapter_data in enumerate(first_pass_data[book_id]["chapters"]):
         print(
-            f"Second Pass - Processing chapter {i+1}/{len(first_pass_data['chapter'])}"
+            f"Second Pass - Processing chapter {i+1}/{len(first_pass_data[book_id]['chapters'])}"
         )
         try:
             global_view = await create_global_view(
@@ -412,7 +419,7 @@ async def process_book(
                 for char in validated_global_view.characters
             }
 
-            second_pass_output["chapter"].append(
+            second_pass_output[book_id]["chapters"].append(
                 {
                     **chapter_data,
                     "summary_global": cumulative_summary,
@@ -421,12 +428,11 @@ async def process_book(
             )
         except Exception as e:
             print(f"Chapter {chapter_data['chapter_id']} (pass 2) failed: {e}")
-            second_pass_output["chapter"].append(chapter_data)
+            second_pass_output[book_id]["chapters"].append(chapter_data)
 
     # Save second pass data to MongoDB
     await save_global_chapters_to_mongo(db, book_id, second_pass_output)
 
     doc.close()
-    mongo_client.close()
+    # mongo_client.close()
     print(f"Processing complete for book_id: {book_id}. Data saved to MongoDB")
-
