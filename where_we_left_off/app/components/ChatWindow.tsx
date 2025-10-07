@@ -63,22 +63,22 @@ export default function ChatWindow({ bookId, bookmarkedPage, onNewGraphData }: C
   return (
     <div className="flex flex-col h-full p-4">
       <h2 className="text-xl font-semibold mb-4 text-center">Chat with the Story</h2>
-      <div className="flex-grow overflow-y-auto mb-4 p-4 bg-gray-800 rounded-md">
+      <div className="flex-grow overflow-y-auto mb-4 p-4 bg-second-color rounded-md">
         <div className="flex flex-col space-y-4">
           {messages.map((msg, index) => (
             <div
               key={index}
               className={`max-w-xs rounded-lg border p-3 text-sm leading-relaxed shadow-sm ${
                 msg.sender === 'user'
-                  ? 'self-end border-sky-400 bg-sky-500/20 text-sky-100'
-                  : 'self-start border-emerald-400 bg-emerald-500/20 text-emerald-100'
+                  ? 'self-end border-third-color bg-third-color/20 text-first-color'
+                  : 'self-start border-fourth-color bg-fourth-color/20 text-first-color'
               }`}
             >
               {msg.text}
             </div>
           ))}
           {isLoading && (
-            <div className="max-w-xs self-start rounded-lg border border-emerald-400 bg-emerald-500/20 p-3 text-sm leading-relaxed text-emerald-100 shadow-sm">
+            <div className="max-w-xs self-start rounded-lg border border-fourth-color bg-fourth-color/20 p-3 text-sm leading-relaxed text-first-color shadow-sm">
               Thinking...
             </div>
           )}
@@ -90,12 +90,12 @@ export default function ChatWindow({ bookId, bookmarkedPage, onNewGraphData }: C
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Ask a question about the story..."
-          className="flex-grow bg-gray-800 border border-gray-600 rounded-l-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex-grow bg-second-color border border-third-color rounded-l-lg p-2 focus:outline-none focus:ring-2 focus:ring-fourth-color text-white"
         />
         <button
           type="submit"
           disabled={isLoading}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-r-lg disabled:bg-gray-500"
+          className="bg-fourth-color hover:bg-third-color text-first-color font-bold py-2 px-4 rounded-r-lg disabled:bg-third-color"
         >
           Send
         </button>

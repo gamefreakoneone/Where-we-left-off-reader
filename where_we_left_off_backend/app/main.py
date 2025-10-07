@@ -128,8 +128,6 @@ async def get_book_status(book_id: str):
     count = await global_chapters_collection.count_documents({"book_id": book_id})
 
     if count > 0:
-        # If global chapters exist, processing is complete.
-        # Update the book's status to 'complete' for faster lookups next time.
         book_collection = app.db.books
         await book_collection.update_one(
             {"book_id": book_id},
@@ -137,7 +135,6 @@ async def get_book_status(book_id: str):
         )
         return {"status": "complete", "book_id": book_id}
 
-    # If not complete, check the books collection for the initial status.
     book_collection = app.db.books
     book_doc = await book_collection.find_one({"book_id": book_id})
     if book_doc:
@@ -166,19 +163,16 @@ async def get_book_data(book_id: str):
     Retrieves all processed data for a given book_id, including book metadata
     and all chapter information from the global processing pass.
     """
-    # Fetch book metadata
     book_meta = await app.db.books.find_one({"book_id": book_id})
     if not book_meta:
         raise HTTPException(status_code=404, detail="Book metadata not found.")
 
-    # Fetch all global chapters for the book
     chapters_cursor = app.db.chapters_global.find({"book_id": book_id})
     chapters = await chapters_cursor.to_list(length=None) # Use length=None to get all documents
 
     if not chapters:
         raise HTTPException(status_code=404, detail="No processed chapter data found for this book. Processing may still be in progress.")
 
-    # To remove the internal MongoDB _id before sending it to the frontend
     for chap in chapters:
         chap.pop('_id', None)
 
@@ -200,7 +194,6 @@ async def chat_with_book(book_id: str, request: ChatRequest):
     if count == 0:
         raise HTTPException(status_code=404, detail="Book has not been processed yet or book_id is invalid.")
 
-    # Prepare the initial state for the LangGraph agent
     initial_state = {
         "messages": [HumanMessage(content=request.question)],
         "book_id": book_id,
@@ -211,10 +204,8 @@ async def chat_with_book(book_id: str, request: ChatRequest):
     config = {"configurable": {"thread_id": f"book-{book_id}"}}
 
     try:
-        # Invoke the asynchronous RAG agent
         final_state = await rag_agent.ainvoke(initial_state, config=config)
         
-        # Extract the last AI message as the answer
         answer = "No answer found."
         for message in reversed(final_state["messages"]):
             if isinstance(message, AIMessage):
