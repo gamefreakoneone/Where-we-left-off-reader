@@ -62,35 +62,44 @@ export default function ChatWindow({ bookId, bookmarkedPage, onNewGraphData }: C
 
   return (
     <div className="flex flex-col h-full p-4">
-        <h2 className="text-xl font-semibold mb-4 text-center">Chat with the Story</h2>
-        <div className="flex-grow overflow-y-auto mb-4 p-2 bg-gray-800 rounded-md">
-            {messages.map((msg, index) => (
-            <div key={index} className={`chat ${msg.sender === 'user' ? 'chat-end' : 'chat-start'}`}>
-                <div className={`chat-bubble ${msg.sender === 'user' ? 'bg-blue-600' : 'bg-gray-600'} text-white p-3 rounded-lg max-w-xs`}>
-                {msg.text}
-                </div>
+      <h2 className="text-xl font-semibold mb-4 text-center">Chat with the Story</h2>
+      <div className="flex-grow overflow-y-auto mb-4 p-4 bg-gray-800 rounded-md">
+        <div className="flex flex-col space-y-4">
+          {messages.map((msg, index) => (
+            <div
+              key={index}
+              className={`max-w-xs rounded-lg border p-3 text-sm leading-relaxed shadow-sm ${
+                msg.sender === 'user'
+                  ? 'self-end border-sky-400 bg-sky-500/20 text-sky-100'
+                  : 'self-start border-emerald-400 bg-emerald-500/20 text-emerald-100'
+              }`}
+            >
+              {msg.text}
             </div>
-            ))}
-            {isLoading && (
-                <div className="chat chat-start">
-                    <div className="chat-bubble bg-gray-600 text-white p-3 rounded-lg max-w-xs">
-                        Thinking...
-                    </div>
-                </div>
-            )}
+          ))}
+          {isLoading && (
+            <div className="max-w-xs self-start rounded-lg border border-emerald-400 bg-emerald-500/20 p-3 text-sm leading-relaxed text-emerald-100 shadow-sm">
+              Thinking...
+            </div>
+          )}
         </div>
-        <form onSubmit={handleSendMessage} className="flex">
-            <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask a question about the story..."
-            className="flex-grow bg-gray-800 border border-gray-600 rounded-l-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <button type="submit" disabled={isLoading} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-r-lg disabled:bg-gray-500">
-            Send
-            </button>
-        </form>
+      </div>
+      <form onSubmit={handleSendMessage} className="flex">
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Ask a question about the story..."
+          className="flex-grow bg-gray-800 border border-gray-600 rounded-l-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-r-lg disabled:bg-gray-500"
+        >
+          Send
+        </button>
+      </form>
     </div>
   );
 }
