@@ -30,7 +30,7 @@ export default function RelationshipGraph({ graphData: storyData, bookmarkedPage
         id: character.name,
         position: { x: (index % 4) * 200, y: Math.floor(index / 4) * 150 },
         data: { label: character.name },
-        style: { background: '#2d3748', color: 'white', border: '1px solid #4a5568' }
+        style: { background: 'var(--second-color)', color: 'var(--fourth-color)', border: '1px solid var(--third-color)' }
       });
 
       if (character.relationships) {
@@ -43,8 +43,8 @@ export default function RelationshipGraph({ graphData: storyData, bookmarkedPage
               target: rel.with_name,
               label: rel.type,
               animated: true,
-              style: { stroke: '#a0aec0' },
-              labelStyle: { fill: 'white', fontWeight: 600 }
+              style: { stroke: 'var(--third-color)' },
+              labelStyle: { fill: 'var(--fourth-color)', fontWeight: 600 }
             });
           }
         });
@@ -55,7 +55,7 @@ export default function RelationshipGraph({ graphData: storyData, bookmarkedPage
   }, [storyData, bookmarkedPage]);
 
   if (graphData.nodes.length === 0) {
-    return <div className="flex items-center justify-center h-full text-gray-400">No character data for this section.</div>
+    return <div className="flex items-center justify-center h-full text-[color:rgba(248,250,252,0.7)]">No character data for this section.</div>
   }
 
   return (
@@ -65,7 +65,7 @@ export default function RelationshipGraph({ graphData: storyData, bookmarkedPage
         edges={graphData.edges}
         fitView
       >
-        <Background color="#4a5568" />
+        <Background color="var(--third-color)" />
         <Controls />
         <MiniMap />
       </ReactFlow>

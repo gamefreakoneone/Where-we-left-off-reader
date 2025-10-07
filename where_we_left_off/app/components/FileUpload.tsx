@@ -49,28 +49,26 @@ export default function FileUpload({ onUploadSuccess, onUploadFailed, setProcess
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white">
-      <div className="bg-gray-800 p-8 rounded-lg shadow-lg text-center w-full max-w-md">
-        <h1 className="text-3xl font-bold mb-4">Welcome to Project Velcro</h1>
-        <p className="mb-6 text-gray-400">Upload your story book in PDF format to begin.</p>
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <input
-              type="file"
-              onChange={handleFileChange}
-              accept=".pdf"
-              className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-            />
-          </div>
+    <div className="w-full text-[var(--fourth-color)]">
+      <div className="mx-auto max-w-xl space-y-6 text-center">
+        <h1 className="text-3xl font-bold">Welcome to Project Velcro</h1>
+        <p className="text-[color:rgba(248,250,252,0.7)]">Upload your story book in PDF format to begin.</p>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <input
+            type="file"
+            onChange={handleFileChange}
+            accept=".pdf"
+            className="w-full text-sm text-[color:rgba(248,250,252,0.75)] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[color:rgba(56,189,248,0.15)] file:text-[var(--third-color)] hover:file:bg-[color:rgba(56,189,248,0.25)]"
+          />
           <button
             type="submit"
             disabled={!file || status === 'uploading'}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg disabled:bg-gray-500 transition-colors"
+            className="w-full bg-[var(--third-color)] text-[var(--first-color)] font-bold py-2 px-4 rounded-lg transition-transform hover:scale-[1.02] disabled:opacity-60 disabled:hover:scale-100"
           >
             {status === 'uploading' ? 'Uploading...' : 'Start Analyzing'}
           </button>
         </form>
-        {status === 'failed' && <p className="text-red-500 mt-4">Upload failed. Please try again.</p>}
+        {status === 'failed' && <p className="text-red-400">Upload failed. Please try again.</p>}
       </div>
     </div>
   );

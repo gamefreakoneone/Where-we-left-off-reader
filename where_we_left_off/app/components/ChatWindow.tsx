@@ -61,19 +61,19 @@ export default function ChatWindow({ bookId, bookmarkedPage, onNewGraphData }: C
   };
 
   return (
-    <div className="flex flex-col h-full p-4">
+    <div className="flex flex-col h-full p-4 text-[var(--fourth-color)]">
         <h2 className="text-xl font-semibold mb-4 text-center">Chat with the Story</h2>
-        <div className="flex-grow overflow-y-auto mb-4 p-2 bg-gray-800 rounded-md">
+        <div className="flex-grow overflow-y-auto mb-4 p-2 rounded-md bg-[color:rgba(30,41,59,0.7)] backdrop-blur-sm">
             {messages.map((msg, index) => (
             <div key={index} className={`chat ${msg.sender === 'user' ? 'chat-end' : 'chat-start'}`}>
-                <div className={`chat-bubble ${msg.sender === 'user' ? 'bg-blue-600' : 'bg-gray-600'} text-white p-3 rounded-lg max-w-xs`}>
+                <div className={`chat-bubble text-sm md:text-base ${msg.sender === 'user' ? 'bg-[var(--third-color)] text-[var(--first-color)]' : 'bg-[color:rgba(56,189,248,0.15)] text-[var(--fourth-color)]'} p-3 rounded-lg max-w-xs`}>
                 {msg.text}
                 </div>
             </div>
             ))}
             {isLoading && (
                 <div className="chat chat-start">
-                    <div className="chat-bubble bg-gray-600 text-white p-3 rounded-lg max-w-xs">
+                    <div className="chat-bubble bg-[color:rgba(56,189,248,0.15)] text-[var(--fourth-color)] p-3 rounded-lg max-w-xs">
                         Thinking...
                     </div>
                 </div>
@@ -85,9 +85,9 @@ export default function ChatWindow({ bookId, bookmarkedPage, onNewGraphData }: C
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask a question about the story..."
-            className="flex-grow bg-gray-800 border border-gray-600 rounded-l-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-grow bg-[color:rgba(15,23,42,0.6)] border border-[color:rgba(56,189,248,0.4)] rounded-l-lg p-2 focus:outline-none focus:ring-2 focus:ring-[var(--third-color)] text-[var(--fourth-color)] placeholder:text-[color:rgba(248,250,252,0.5)]"
             />
-            <button type="submit" disabled={isLoading} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-r-lg disabled:bg-gray-500">
+            <button type="submit" disabled={isLoading} className="bg-[var(--third-color)] text-[var(--first-color)] font-bold py-2 px-4 rounded-r-lg disabled:opacity-60 transition-transform hover:scale-[1.02] disabled:hover:scale-100">
             Send
             </button>
         </form>

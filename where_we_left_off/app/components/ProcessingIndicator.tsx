@@ -21,22 +21,22 @@ export default function ProcessingIndicator({ status }: ProcessingIndicatorProps
     switch (status) {
       case 'in_progress':
         return {
-          bgColor: 'bg-orange-500',
-          lightClass: 'animate-pulse',
+          containerClass: 'bg-[var(--second-color)] text-[var(--fourth-color)] border border-[color:rgba(56,189,248,0.4)]',
+          lightClass: 'animate-pulse bg-[var(--third-color)]',
           text: 'Processing analysis...',
           showDismiss: false,
         };
       case 'complete':
         return {
-          bgColor: 'bg-green-500',
-          lightClass: '',
+          containerClass: 'bg-[var(--third-color)] text-[var(--first-color)]',
+          lightClass: 'bg-[var(--first-color)]',
           text: 'Processing complete!',
           showDismiss: true,
         };
       case 'failed':
         return {
-          bgColor: 'bg-red-500',
-          lightClass: '',
+          containerClass: 'bg-[color:rgba(56,189,248,0.12)] text-[var(--third-color)] border border-[color:rgba(56,189,248,0.4)]',
+          lightClass: 'bg-red-500',
           text: 'Processing failed.',
           showDismiss: true,
         };
@@ -50,11 +50,11 @@ export default function ProcessingIndicator({ status }: ProcessingIndicatorProps
 
   return (
     <div className="fixed bottom-5 right-5 z-50">
-      <div className={`flex items-center p-3 rounded-lg shadow-2xl text-white ${content.bgColor}`}>
-        <div className={`w-4 h-4 rounded-full mr-3 ${content.lightClass} ${content.bgColor}`}></div>
+      <div className={`flex items-center p-3 rounded-lg shadow-2xl gap-3 ${content.containerClass}`}>
+        <div className={`w-4 h-4 rounded-full ${content.lightClass}`}></div>
         <span className="font-medium">{content.text}</span>
         {content.showDismiss && (
-          <button onClick={handleDismiss} className="ml-4 text-xl font-bold hover:text-gray-200">
+          <button onClick={handleDismiss} className="ml-2 text-xl font-bold text-inherit hover:text-[color:rgba(248,250,252,0.7)]">
             &times;
           </button>
         )}

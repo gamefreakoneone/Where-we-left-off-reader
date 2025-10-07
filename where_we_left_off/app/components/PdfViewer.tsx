@@ -31,7 +31,7 @@ export default function PdfViewer({ file, bookmarkedPage, setBookmarkedPage }: P
   if (!isReady) {
     return (
       <div className="w-full h-full flex items-center justify-center">
-        <div className="text-white">Loading PDF viewer...</div>
+        <div className="text-[var(--fourth-color)]">Loading PDF viewer...</div>
       </div>
     );
   }
@@ -39,21 +39,21 @@ export default function PdfViewer({ file, bookmarkedPage, setBookmarkedPage }: P
   return (
     <div className="w-full h-full flex flex-col items-center">
       <div className="flex-grow overflow-y-auto w-full flex justify-center">
-        <Document 
-          file={file} 
+        <Document
+          file={file}
           onLoadSuccess={onDocumentLoadSuccess}
-          loading={<div className="text-white">Loading PDF...</div>}
+          loading={<div className="text-[var(--fourth-color)]">Loading PDF...</div>}
           error={<div className="text-red-500">Error loading PDF</div>}
         >
           <Page pageNumber={bookmarkedPage} />
         </Document>
       </div>
-      <div className="flex items-center justify-center p-4 bg-gray-700 rounded-b-lg w-full">
-        <button onClick={goToPrevPage} disabled={bookmarkedPage <= 1} className="px-4 py-2 bg-blue-600 rounded-md disabled:bg-gray-500 mr-4">
+      <div className="flex items-center justify-center p-4 bg-[var(--second-color)] rounded-b-lg w-full gap-6 shadow-inner">
+        <button onClick={goToPrevPage} disabled={bookmarkedPage <= 1} className="px-4 py-2 bg-[var(--third-color)] text-[var(--first-color)] rounded-md disabled:opacity-60 transition-transform hover:scale-[1.02] disabled:hover:scale-100">
           Previous
         </button>
-        <p>Page {bookmarkedPage} of {numPages}</p>
-        <button onClick={goToNextPage} disabled={bookmarkedPage >= numPages!} className="px-4 py-2 bg-blue-600 rounded-md disabled:bg-gray-500 ml-4">
+        <p className="text-[var(--fourth-color)]">Page {bookmarkedPage} of {numPages}</p>
+        <button onClick={goToNextPage} disabled={bookmarkedPage >= numPages!} className="px-4 py-2 bg-[var(--third-color)] text-[var(--first-color)] rounded-md disabled:opacity-60 transition-transform hover:scale-[1.02] disabled:hover:scale-100">
           Next
         </button>
       </div>
