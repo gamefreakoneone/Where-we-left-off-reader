@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 interface LeftPanelProps {
   graphData: any;
@@ -10,9 +10,10 @@ interface LeftPanelProps {
 
 export default function LeftPanel({ graphData: storyData, bookmarkedPage, onBookmarkPage }: LeftPanelProps) {
 
+  const [isSummaryOpen, setIsSummaryOpen] = useState(false);
   const currentChapter = useMemo(() => {
     if (!storyData || !storyData.chapter) return null;
-    return storyData.chapter.find((chap: any) => 
+    return storyData.chapter.find((chap: any) =>
       bookmarkedPage >= chap.pages[0] && bookmarkedPage <= chap.pages[1]
     );
   }, [storyData, bookmarkedPage]);
@@ -23,10 +24,22 @@ export default function LeftPanel({ graphData: storyData, bookmarkedPage, onBook
       <p className="text-sm text-gray-400 mb-6">{storyData?.author || "Unknown Author"}</p>
 
       <div className="mb-6">
-        <h2 className="text-xl font-semibold mb-2">Story So Far</h2>
-        <div className="text-gray-300 text-sm overflow-y-auto max-h-64 pr-2">
-            {currentChapter ? currentChapter.summary_global : "No summary available for this section."}
+        <div className="flex items-center justify-between gap-4 mb-2">
+          <h2 className="text-xl font-semibold">Story So Far</h2>
+          <button
+            type="button"
+            onClick={() => setIsSummaryOpen((prev) => !prev)}
+            aria-expanded={isSummaryOpen}
+            className="text-sm text-green-400 hover:text-green-300 focus:outline-none focus:ring-2 focus:ring-green-400 rounded"
+          >
+            {isSummaryOpen ? "Hide summary" : "Show summary"}
+          </button>
         </div>
+        {isSummaryOpen && (
+          <div className="text-gray-300 text-sm overflow-y-auto max-h-64 pr-2">
+            {currentChapter ? currentChapter.summary_global : "No summary available for this section."}
+          </div>
+        )}
       </div>
 
       <div className="mt-auto">
