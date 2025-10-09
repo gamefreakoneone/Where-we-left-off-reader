@@ -125,7 +125,6 @@ UPLOAD_DIR=../Books/
 3. **Access the application:**
    - Frontend: http://localhost:3000
    - Backend API: http://127.0.0.1:8000
-   - Backend docs: http://127.0.0.1:8000/docs
 
 ## 🔧 How It Works
 
@@ -162,7 +161,7 @@ The application ensures you don't get spoilers from chapters beyond your current
   - Analysis data retrieval
   - Q&A agent
 
-- **Core (`where_we_left_off_core`)**: Python processing engine
+- **Core (`where_we_left_off_core`)**: The original processing logic where I experimented with ideas. Use it as reference
   - PDF parsing and chapter segmentation
   - AI analysis of text content
   - Character and relationship tracking
@@ -248,22 +247,6 @@ The application implements strict spoiler protection:
 }
 ```
 
-## 🧪 Development
-
-### Running Tests
-
-Backend tests:
-```bash
-cd where_we_left_off_backend
-pytest
-```
-
-Frontend tests:
-```bash
-cd where_we_left_off
-pnpm run test
-```
-
 ### Development Scripts
 
 In the frontend directory:
@@ -294,7 +277,5 @@ The frontend is ready for deployment to Vercel, Netlify, or any hosting service 
 - Built with Next.js, React, FastAPI, and OpenAI
 - Uses PyMuPDF for PDF processing
 - Powered by LangGraph for AI agent workflows
-
-## 📝 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
+- My really bad attention span thanks to TikTok and reels.
+- Nier Automata Soundtrack for blocking the voices in my head
