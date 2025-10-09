@@ -32,7 +32,6 @@ An AI-powered story analysis and reading companion that helps users understand a
 ### Core Processing
 - **Python 3.8+**
 - **Pydantic** (data validation)
-- **TikToken** (token counting)
 - **Python-dotenv** (environment management)
 
 ## 📁 Project Structure
