@@ -272,10 +272,11 @@ The backend can be deployed to any platform that supports Python applications (H
 
 The frontend is ready for deployment to Vercel, Netlify, or any hosting service that supports Next.js.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - Built with Next.js, React, FastAPI, and OpenAI
 - Uses PyMuPDF for PDF processing
 - Powered by LangGraph for AI agent workflows
 - My really bad attention span thanks to TikTok and reels.
 - Nier Automata Soundtrack for blocking the voices in my head
+- If you are still reading this, refer to me a company at this point man. (◕ᴥ◕ʋ)
