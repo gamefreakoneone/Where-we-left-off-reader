@@ -2,7 +2,7 @@
 
 An AI-powered story analysis and reading companion that helps users understand and track narrative elements as they read books. The application provides character relationship tracking, story summaries, and a Q&A system with spoiler protection.
 
-## 🚀 Features
+## Features
 
 - **PDF Upload & Processing**: Upload any PDF book for AI-powered analysis
 - **Character Tracking**: Monitor character development, relationships, and status throughout the story
@@ -11,7 +11,7 @@ An AI-powered story analysis and reading companion that helps users understand a
 - **Spoiler-Free Q&A**: Ask questions about the story with protection against future spoilers
 - **Reading Progress Sync**: Keep track of your reading progress and drop in fresh stories
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 ### Frontend
 - **Next.js 15.5.2** (with Turbopack)
@@ -55,7 +55,7 @@ Project-Velcro/
 └── Books/                      # PDF upload directory
 ```
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -125,9 +125,11 @@ UPLOAD_DIR=../Books/
    - Frontend: http://localhost:3000
    - Backend API: http://127.0.0.1:8000
 
-## 🔧 How It Works
+## How It Works
 
 ### Two-Pass Processing Architecture
+
+![RAG Architecture](where_we_left_off_backend/Architecture_Images/RAG.png)
 
 1. **Pass 1 - Chapter Analysis:**
    - PDF segmentation and chapter extraction
@@ -166,7 +168,7 @@ The application ensures you don't get spoilers from chapters beyond your current
   - Character and relationship tracking
   - Vector indexing for semantic search
 
-## 📖 Usage
+## Usage
 
 1. **Upload a PDF**: Go to the home page and upload your book
 2. **Wait for Processing**: The system will analyze the book in the background
@@ -174,7 +176,7 @@ The application ensures you don't get spoilers from chapters beyond your current
 4. **Ask Questions**: Use the Q&A panel to ask about characters, plot points, or relationships
 5. **Track Progress**: The app remembers where you left off
 
-## 🤖 AI-Powered Features
+## AI-Powered Features
 
 - **Character Analysis**: Automatic detection of characters, aliases, roles, and status
 - **Relationship Mapping**: Tracking of character relationships and how they evolve
@@ -182,14 +184,14 @@ The application ensures you don't get spoilers from chapters beyond your current
 - **Semantic Search**: Intelligent search through the book content
 - **Q&A with Context**: Answers questions based on current reading level
 
-## 🔒 Spoiler Safety
+## Spoiler Safety
 
 The application implements strict spoiler protection:
 - All results are filtered by the current chapter
 - Questions about future events are politely declined
 - Relationship data is only shown up to your current reading position
 
-## 📊 Data Model
+##  Data Model
 
 ### Chapter Record Structure
 ```json
@@ -261,15 +263,6 @@ pnpm run build
 pnpm run start
 ```
 
-## 🚀 Deployment
-
-### Backend (FastAPI)
-
-The backend can be deployed to any platform that supports Python applications (Heroku, VPS, etc.).
-
-### Frontend (Next.js)
-
-The frontend is ready for deployment to Vercel, Netlify, or any hosting service that supports Next.js.
 
 ## Acknowledgments
 
