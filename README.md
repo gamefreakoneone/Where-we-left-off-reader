@@ -129,8 +129,6 @@ UPLOAD_DIR=../Books/
 
 ### Two-Pass Processing Architecture
 
-![RAG Architecture](where_we_left_off_backend/Architecture_Images/RAG.png)
-
 1. **Pass 1 - Chapter Analysis:**
    - PDF segmentation and chapter extraction
    - AI-powered analysis of each chapter for characters, relationships, and summaries
@@ -147,6 +145,9 @@ The application ensures you don't get spoilers from chapters beyond your current
 - All queries are filtered by the current chapter/page
 - Semantic search results are limited to content you've already read
 - Q&A system refuses to answer questions about future plot points
+
+### RAG Architecture
+![RAG Architecture](where_we_left_off_backend/Architecture_Images/RAG.png)
 
 ### Components
 
