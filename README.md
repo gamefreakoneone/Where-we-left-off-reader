@@ -34,7 +34,7 @@ An AI-powered story analysis and reading companion that helps users understand a
 - **Pydantic** (data validation)
 - **Python-dotenv** (environment management)
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 Project-Velcro/
@@ -112,7 +112,7 @@ UPLOAD_DIR=../Books/
 1. **Start the backend server:**
    ```bash
    cd where_we_left_off_backend
-   uvicorn main:app --reload --port 8000
+   uvicorn app.main:app --reload --port 8000
    ```
 
 2. **In a new terminal, start the frontend:**

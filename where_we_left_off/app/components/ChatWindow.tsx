@@ -68,17 +68,17 @@ export default function ChatWindow({ bookId, bookmarkedPage, onNewGraphData }: C
           {messages.map((msg, index) => (
             <div
               key={index}
-              className={`max-w-xs rounded-lg border p-3 text-sm leading-relaxed shadow-sm ${
+              className={`max-w-xs rounded-lg p-3 text-sm leading-relaxed shadow-sm ${
                 msg.sender === 'user'
-                  ? 'self-end border-third-color bg-third-color/20 text-first-color'
-                  : 'self-start border-fourth-color bg-fourth-color/20 text-first-color'
+                  ? 'self-end bg-third-color text-first-color'
+                  : 'self-start bg-fourth-color text-first-color'
               }`}
             >
               {msg.text}
             </div>
           ))}
           {isLoading && (
-            <div className="max-w-xs self-start rounded-lg border border-fourth-color bg-fourth-color/20 p-3 text-sm leading-relaxed text-first-color shadow-sm">
+            <div className="max-w-xs self-start rounded-lg bg-fourth-color p-3 text-sm leading-relaxed text-first-color shadow-sm">
               Thinking...
             </div>
           )}

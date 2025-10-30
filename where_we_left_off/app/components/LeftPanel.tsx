@@ -20,7 +20,7 @@ export default function LeftPanel({ graphData: storyData, bookmarkedPage, onBook
 
   return (
     <div className="flex flex-col h-full p-2">
-      <h1 className="text-2xl font-bold mb-2">{storyData?.book_title || "Your Story"}</h1>
+      <h1 className="text-2xl font-bold font-mono mb-2 text-fourth-color">{storyData?.book_title || "Your Story"}</h1>
       {/* <p className="text-sm text-muted mb-6">{storyData?.author || "Unknown Author"}</p> */}
 
       <div className="mb-6">
@@ -36,7 +36,7 @@ export default function LeftPanel({ graphData: storyData, bookmarkedPage, onBook
           </button>
         </div>
         {isSummaryOpen && (
-          <div className="text-muted text-sm overflow-y-auto max-h-64 pr-2">
+          <div className="text-white text-base italic leading-relaxed overflow-y-auto max-h-64 pr-2">
             {currentChapter ? currentChapter.summary_global : "No summary available for this section."}
           </div>
         )}
